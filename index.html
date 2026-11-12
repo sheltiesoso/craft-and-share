@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRAFT & SHARE</title>
+    <link rel="stylesheet" href="/src/style.css">
+</head>
+
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="crosshair"></div>
+
+    <!-- タイトル画面オーバーレイ -->
+    <div id="title-screen">
+        <div class="title-modal">
+            <div class="title-header">
+                <h1 class="title-logo">⛏️ CRAFT &amp; SHARE</h1>
+                <p class="title-subtitle">ブロックを創り、世界を共有しよう</p>
+            </div>
+            <div class="title-nav">
+                <button id="tabWorldListBtn" class="title-tab-btn active">🌍 ワールド一覧</button>
+                <button id="tabWorldCreateBtn" class="title-tab-btn">✨ 新規ワールド作成</button>
+            </div>
+            <div class="title-content">
+                <div id="panelWorldList" class="tab-panel active">
+                    <div class="world-list-header">
+                        <span id="worldListCount" class="world-list-title">登録ワールド</span>
+                        <button id="refreshWorldListBtn" class="refresh-btn">🔄 一覧を更新</button>
+                    </div>
+                    <div id="worldListLoading" style="display:none; text-align:center; padding:30px;">
+                        <span class="loading-spinner"></span>
+                        <p style="margin-top:10px; color:#94a3b8; font-size:13px;">ワールド一覧を取得中...</p>
+                    </div>
+                    <div id="worldListError" class="error-banner"></div>
+                    <div id="worldCardsContainer" class="world-cards-container"></div>
+                </div>
+
+                <div id="panelWorldCreate" class="tab-panel">
+                    <div id="createWorldError" class="error-banner"></div>
+                    <form id="createWorldForm">
+                        <div class="form-group">
+                            <label for="newWorldNameInput" class="form-label">ワールド名</label>
+                            <input type="text" id="newWorldNameInput" class="form-input" placeholder="例: はじまりの街, 空中要塞..." maxlength="50" autocomplete="off" required />
+                            <span class="form-helper">※ 1〜50文字（英数字・日本語対応）</span>
+                        </div>
+                        <button type="submit" id="createWorldSubmitBtn" class="create-submit-btn">
+                            🛠️ ワールドを作成して参加
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ワールド削除確認モーダル -->
+    <div id="deleteWorldModal" class="delete-modal-overlay" style="display: none;">
+        <div class="delete-modal-card">
+            <div class="delete-modal-header">
+                <h3 class="delete-modal-title">⚠️ ワールドの削除</h3>
+                <button type="button" id="closeDeleteModalBtn" class="delete-modal-close-btn" title="閉じる">×</button>
+            </div>
+            <div class="delete-modal-body">
+                <p class="delete-warning-text">
+                    ワールド「<strong id="deleteTargetWorldNameDisplay" class="delete-target-highlight"></strong>」（ID: <code id="deleteTargetWorldIdDisplay"></code>）を完全に削除しますか？<br>
+                    <strong>⚠️ この操作を実行すると、ワールド内のすべてのブロックデータが消去され、元に戻すことはできません。</strong>
+                </p>
+                <div id="deleteModalError" class="error-banner"></div>
+                <div class="delete-confirm-input-group">
+                    <label for="deleteConfirmInput" class="form-label">
+                        確認のため、ワールド名 <span id="deleteRequiredNamePrompt" class="delete-required-name"></span> を正確に入力してください:
+                    </label>
+                    <input type="text" id="deleteConfirmInput" class="form-input" placeholder="ワールド名を入力..." autocomplete="off" />
+                </div>
+            </div>
+            <div class="delete-modal-footer">
+                <button type="button" id="cancelDeleteModalBtn" class="refresh-btn">キャンセル</button>
+                <button type="button" id="confirmDeleteSubmitBtn" class="join-world-btn delete-confirm-btn" disabled>
+                    🗑️ 完全に削除する
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- キー操作説明モーダル（中身はmain.jsで描画） -->
+    <div id="controlsModal" class="controls-modal-overlay" style="display: none;">
+        <div class="controls-modal-card">
+            <div class="controls-modal-header">
+                <h3 class="controls-modal-title">🎮 操作方法</h3>
+                <button type="button" id="closeControlsModalBtn" class="controls-modal-close-btn" title="閉じる">×</button>
+            </div>
+            <div id="controlsModalBody" class="controls-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- 掲示板 操作案内プロンプト -->
+    <div id="boardInteractPrompt">
+        <span>クリックで掲示板を開く</span>
+    </div>
+
+    <!-- Community Board モーダル -->
+    <div id="communityBoardModal" class="board-modal-overlay" style="display: none;">
+        <div class="board-modal-card">
+            <div class="board-modal-header">
+                <div class="board-modal-title-group">
+                    <h3 class="board-modal-title">📋 Community Board</h3>
+                    <span id="boardWorldNameLabel" class="board-world-label">ワールド</span>
+                </div>
+                <button type="button" id="closeBoardModalBtn" class="board-close-btn" title="閉じる (ESC)">×</button>
+            </div>
+            <div class="board-toolbar">
+                <div class="board-category-tabs" id="boardCategoryTabs">
+                    <button type="button" class="board-tab-btn active" data-category="すべて">すべて</button>
+                    <button type="button" class="board-tab-btn" data-category="交流">交流</button>
+                    <button type="button" class="board-tab-btn" data-category="お知らせ">お知らせ</button>
+                </div>
+                <span id="boardPostCount" class="board-post-count">0 件</span>
+            </div>
+            <div id="boardErrorBanner" class="board-error-banner"></div>
+            <div id="boardPostsList" class="board-posts-area"></div>
+            <form id="boardComposeForm" class="board-compose-form">
+                <div class="board-compose-top">
+                    <span class="board-compose-label">📝 新規メモを貼る</span>
+                    <select id="boardCategorySelect" class="board-category-select" aria-label="投稿カテゴリ">
+                        <option value="交流">💬 交流</option>
+                        <option value="お知らせ">📢 お知らせ</option>
+                    </select>
+                </div>
+                <textarea id="boardContentInput" class="board-textarea" placeholder="ワールドのみんなへメッセージを残そう（最大300文字・テキストのみ）..." maxlength="300" required></textarea>
+                <div class="board-compose-bottom">
+                    <span id="boardCharCounter" class="board-char-counter">0 / 300</span>
+                    <button type="submit" id="boardSubmitBtn" class="board-submit-btn">📌 掲示板に投稿</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ワールド内メモ モーダル（設置・閲覧共通） -->
+    <div id="memoModal" class="memo-modal-overlay" style="display: none;">
+        <div class="memo-modal-card">
+            <div class="memo-modal-header">
+                <h3 id="memoModalTitle" class="memo-modal-title">📝 メモ</h3>
+                <button type="button" id="closeMemoModalBtn" class="memo-close-btn" title="閉じる (ESC)">×</button>
+            </div>
+            <div class="memo-modal-body">
+                <div id="memoModalError" class="error-banner" style="margin-bottom:0; display:none;"></div>
+                <div id="memoViewSection" style="display: none;">
+                    <div class="memo-meta-row">
+                        <span>投稿者: <strong id="memoViewAuthor"></strong></span>
+                        <span id="memoViewDate"></span>
+                    </div>
+                    <p id="memoViewContent" class="memo-view-text"></p>
+                </div>
+                <form id="memoCreateForm" style="display: none;">
+                    <textarea id="memoCreateInput" class="board-textarea" placeholder="建物や場所の説明・メッセージを入力（最大150文字・テキストのみ）..." maxlength="150" required></textarea>
+                    <div style="display:flex; justify-content:flex-end; margin-top:4px;">
+                        <span id="memoCreateCounter" class="memo-counter">0 / 150</span>
+                    </div>
+                </form>
+                <div class="memo-modal-footer">
+                    <button type="button" id="memoDeleteBtn" class="delete-world-btn" style="display: none;">🗑️ 削除</button>
+                    <button type="button" id="memoCancelBtn" class="memo-cancel-btn">閉じる</button>
+                    <button type="button" id="memoSubmitBtn" class="board-submit-btn" style="display: none;">📌 設置する</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 左上マルチプレイHUD -->
+    <div id="multiplayer-hud">
+        <div id="onlinePlayersPanel" class="online-players-panel">
+            <div class="online-players-header">
+                <span class="online-players-title">👥 プレイヤー (<span id="onlinePlayerCount">1</span>)</span>
+            </div>
+            <div id="onlinePlayersList" class="online-players-list"></div>
+        </div>
+    </div>
+
+    <!-- 入退室通知フィード -->
+    <div id="playerNotificationFeed"></div>
+
+    <!-- 右上UIオーバーレイ -->
+    <div id="ui-overlay">
+        <div id="worldProfile" class="world-badge">
+            <span>🌍</span>
+            <span id="currentWorldNameDisplay" class="world-badge-name">デフォルトワールド</span>
+            <span id="currentWorldIdDisplay" class="world-card-id">default</span>
+        </div>
+        <div id="playerProfile" class="player-profile">
+            <span class="profile-label">プレイヤー:</span>
+            <span id="playerNameDisplay" class="player-name-text">Player-XXXX</span>
+            <button id="changeNameBtn" class="change-name-btn" title="名前を変更">✏️ 変更</button>
+        </div>
+        <button id="controlsHelpBtn" class="ui-button" title="操作方法を確認">🎮 操作方法</button>
+        <button id="leaveWorldBtn" class="ui-button leave-btn" title="タイトル画面へ戻る">🚪 タイトルへ戻る</button>
+        <div id="statusToast" class="status-toast"></div>
+    </div>
+
+    <!-- チャットUI -->
+    <div id="chat-container">
+        <div id="chat-messages"></div>
+        <form id="chat-form">
+            <input type="text" id="chat-input" placeholder="Enterキーで発言..." maxlength="200" autocomplete="off" />
+            <button type="submit" id="chat-send-btn">送信</button>
+        </form>
+    </div>
+
+    <!-- ホットバー（中身はmain.jsで描画） -->
+    <div id="hotbar"></div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
