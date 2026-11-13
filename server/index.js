@@ -4,6 +4,8 @@
 
 const express = require('express');
 const http = require('http');
+const path = require('path');
+const fs = require('fs');
 const { Server } = require('socket.io');
 const dotenv = require('dotenv');
 const crypto = require('crypto');
@@ -21,8 +23,13 @@ const io = new Server(server, {
     pingInterval: 5000
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
+const distPath = path.join(__dirname, '..', 'dist');
+const indexHtmlPath = path.join(distPath, 'index.html');
+
 app.use(express.json({ limit: '10mb' }));
+app.use(express.static(distPath));
 
 const VALID_BLOCK_TYPES = ['grass', 'dirt', 'stone', 'wood', 'sand', 'glass', 'leaves', 'brick'];
 const TERRAIN_MIN = -2;
@@ -308,6 +315,13 @@ app.get('/api/world', async (req, res) => {
     }
 });
 
+app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/socket.io') && fs.existsSync(indexHtmlPath)) {
+        return res.sendFile(indexHtmlPath);
+    }
+    next();
+});
+
 async function ensureWorldExists(worldId) {
     if (verifiedWorlds.has(worldId)) return;
     if (worldVerificationPromises.has(worldId)) return worldVerificationPromises.get(worldId);
@@ -570,9 +584,9 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, async () => {
+server.listen(PORT, HOST, async () => {
     console.log('==================================================');
-    console.log(`🚀 CRAFT & SHARE サーバー起動 (http://localhost:${PORT})`);
+    console.log(`🚀 CRAFT & SHARE サーバー起動 (http://${HOST}:${PORT})`);
     console.log('==================================================');
     if (await testConnection()) {
         await initDatabaseMigration();
