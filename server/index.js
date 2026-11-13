@@ -535,7 +535,7 @@ io.on('connection', (socket) => {
             senderName: player.name,
             senderColor: player.color,
             text,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            timestamp: new Date(now).toISOString()
         };
 
         if (!chatHistories.has(worldId)) chatHistories.set(worldId, []);

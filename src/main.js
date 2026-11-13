@@ -942,7 +942,7 @@ async function enterWorld(worldId, worldName) {
             senderName: "システム",
             senderColor: "#38bdf8",
             text: `ワールド「${currentActiveWorldName}」に参加しました。`,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            timestamp: new Date().toISOString()
         });
     } catch (error) {
         console.error("ワールド参加エラー:", error);
@@ -1442,6 +1442,14 @@ chatForm?.addEventListener("submit", (e) => {
     }
 });
 
+function formatChatTime(ts) {
+    if (!ts) return "";
+    const d = new Date(ts);
+    return !Number.isNaN(d.getTime())
+        ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : String(ts);
+}
+
 function addChatMessageToUI(message) {
     if (!chatMessages) return;
     const line = document.createElement("div");
@@ -1449,7 +1457,7 @@ function addChatMessageToUI(message) {
 
     const timeSpan = document.createElement("span");
     timeSpan.className = "chat-time";
-    timeSpan.textContent = `[${message.timestamp || ""}]`;
+    timeSpan.textContent = `[${formatChatTime(message.timestamp)}]`;
 
     const senderSpan = document.createElement("span");
     senderSpan.className = "chat-sender";
