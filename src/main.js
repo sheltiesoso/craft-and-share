@@ -22,6 +22,7 @@ scene.collisionsEnabled = true;
 scene.clearColor = new Color4(0.53, 0.81, 0.98, 1.0);
 
 const camera = new UniversalCamera("playerCamera", new Vector3(0, 2.1, -4), scene);
+camera.minZ = 0.05;
 camera.setTarget(new Vector3(0, 2.1, 0));
 camera.attachControl(canvas, true);
 camera.angularSensibility = 2000;
@@ -1086,6 +1087,7 @@ const CONTROL_GUIDES = [
     { desc: "しゃがむ", keys: [{ t: "Shift", cls: "wide" }] },
     { desc: "ブロック破壊", keys: [{ t: "左クリック", cls: "mouse" }] },
     { desc: "ブロック設置", keys: [{ t: "右クリック", cls: "mouse" }] },
+    { desc: "横伸ばし設置（ブロック上面の端を照準）", keys: [{ t: "右クリック", cls: "mouse" }] },
     { desc: "ブロック選択", keys: [{ t: "1" }, { sep: "〜" }, { t: "8" }, { sep: "/" }, { t: "ホイール", cls: "mouse" }] },
     { desc: "チャット", keys: [{ t: "Enter" }, { sep: "/" }, { t: "T" }] },
     { desc: "メモ設置（ブロック面を照準）", keys: [{ t: "M" }] },
